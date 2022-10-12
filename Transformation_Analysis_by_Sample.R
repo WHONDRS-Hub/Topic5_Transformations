@@ -1,23 +1,31 @@
 ### Determing carbon transformations ###
 # RED 2020, robert.danczak@pnnl.gov
+# JCS edits 2022, James.Stegen@pnnl.gov
 
 library(dplyr)
 library(tidyr)
 
 options(digits=10) # Sig figs in mass resolution data
 
-Sample_Name = "Dataset_Name" # This is a name that will be added to the output file (helps in tracking)
+Sample_Name = "Topic5_Sed" # This is a name that will be added to the output file (helps in tracking)
+
+Dataset_File = "alpha_diversity_CompoundClass_Sed.csv" # name of file with data to read in
+
+Sample_Identifier = "S19S" # this is to identify sample columns in the data file. It needs to show up in every sample column name
 
 #######################
 ### Loading in data ###
 #######################
 
-# Loading in ICR data
-setwd("/path/to/ICR-Data")
-data = read.csv(list.files(pattern = "*_Data.csv"), row.names = 1) # Keeping data and mol-data seperate to ensure they are unaltered
-mol = read.csv(list.files(pattern = "*_Mol.csv"), row.names = 1)
+# Loading in ICR data. These are specific to the Topic 5 data format
+data = read.csv(Dataset_File,stringsAsFactors = F) # single integrated data file
+data = data[-grep(pattern = "alphaDiversity",x = data$Mass),] # remove last row with peak count
+data$Mass = as.numeric(data$Mass) # change mass to numeric
 
-colnames(data) = paste("Sample_", colnames(data), sep="")
+data = data[which(data$SampleCount > 0),] # drop peaks with zero abundance
+data = data[,-which(colnames(data) == "SampleCount")] # drop the column that counted up peak abundances
+
+colnames(data)[grep(pattern = Sample_Identifier,x = colnames(data))] = paste("Sample_", colnames(data)[grep(pattern = Sample_Identifier,x = colnames(data))], sep="")
 
 # Loading in transformations
 trans.full =  read.csv("Transformation_Database_07-2020.csv")
@@ -27,20 +35,10 @@ trans.full$Name = as.character(trans.full$Name)
 #### Errors ####
 # ############ #
 
-# Checking row names consistency between molecular info and data
-if(identical(x = row.names(data), y = row.names(mol)) == FALSE){
-  stop("Something is incorrect: the mol. info and peak counts don't match")
-}
-
-# Checking to ensure ftmsRanalysis was run
-if(length(which(mol$C13 == 1)) > 0){
-  stop("Isotopic signatures weren't removed")
-}
-
 # Likely not necessary, but ensuring the data is presence/absence
-if(max(data) > 1){
+if(max(data[,grep(pattern = Sample_Identifier,x = colnames(data))]) > 1){
   print("Data was not presence/absence")
-  data[data > 1] = 1
+  data[data[,grep(pattern = Sample_Identifier,x = colnames(data))] > 1] = 1
 }
 
 # Creating output directories
@@ -58,7 +56,7 @@ if(!dir.exists("Transformations per Peak")){
 ###########################################
 
 # pull out just the sample names
-samples.to.process = colnames(data)
+samples.to.process = colnames(data)[grep(pattern = Sample_Identifier,x = colnames(data))]
 
 # error term
 error.term = 0.000010
@@ -74,8 +72,8 @@ for (current.sample in samples.to.process) {
   
   print(date())
   
-  one.sample.matrix = cbind(as.numeric(as.character(row.names(data))), data[,which(colnames(data) == current.sample), drop = FALSE]) # "drop = FALSE" ensures that the row and column names remain associated with the data
-  colnames(one.sample.matrix) = c("peak", colnames(one.sample.matrix[2]))
+  one.sample.matrix = data[,c('Mass',current.sample)]
+  colnames(one.sample.matrix) = c("peak", current.sample)
   # print(head(one.sample.matrix))
   
   Sample_Peak_Mat <- one.sample.matrix %>% gather("sample", "value", -1) %>% filter(value > 0) %>% select(sample, peak)
