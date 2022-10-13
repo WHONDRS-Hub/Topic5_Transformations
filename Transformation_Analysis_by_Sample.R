@@ -7,9 +7,9 @@ library(tidyr)
 
 options(digits=10) # Sig figs in mass resolution data
 
-Sample_Name = "Topic5_Sed" # This is a name that will be added to the output file (helps in tracking)
+Sample_Name = "Topic5_WAT" # This is a name that will be added to the output file (helps in tracking)
 
-Dataset_File = "alpha_diversity_CompoundClass_Sed.csv" # name of file with data to read in
+Dataset_File = "alpha_diversity_CompoundClass_WAT.csv" # name of file with data to read in
 
 Sample_Identifier = "S19S" # this is to identify sample columns in the data file. It needs to show up in every sample column name
 
